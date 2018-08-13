@@ -1,32 +1,26 @@
 package codesquad.domain;
 
 import codesquad.support.AbstractEntity;
-import codesquad.support.MoneyFormatter;
 import codesquad.support.PriceCalcultor;
 import com.fasterxml.jackson.annotation.*;
-import lombok.*;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.antlr.v4.runtime.misc.OrderedHashSet;
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+import javax.annotation.PostConstruct;
 import javax.persistence.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
-@Data
-@EqualsAndHashCode(exclude = "cartProducts")
 @Entity
 @Slf4j
+@Data
 public class Cart extends AbstractEntity {
     public static final Cart EMPTY_CART = new EmptyCart();
 
     @JsonIgnore
-    @OneToMany(mappedBy = "cart")//, fetch=FetchType.EAGER)
+    @OneToMany(mappedBy = "cart")
     @Cascade(CascadeType.ALL)
     @OrderBy("created_at")
     private List<CartProduct> cartProducts = new ArrayList<>();
@@ -46,23 +40,23 @@ public class Cart extends AbstractEntity {
         return false;
     }
 
-    @PostLoad @PrePersist //@PostPersist
-    public void initCartProductCnt() {
-        this.cartProductCnt = getCartProducts().size();//cartProducts.size();
-        log.debug("initCartProductCnt {}", cartProductCnt);
+
+    @PostLoad @PostPersist @PostUpdate
+    public void setCartProductCnt() {
+        this.cartProductCnt = cartProducts.size();
+        log.debug("getCartProductCnt {}", cartProductCnt);
     }
+
     //todo 어떻게 하나
     //@JsonAnyGetter
     @JsonGetter("calculation")
-    @JsonSetter("calculation")
     public Map getCalculation() {
         Map<String, Object> calculation = new HashMap();
         Long totalPrice = 0L;
         for (CartProduct cartProduct :cartProducts) {
             totalPrice += cartProduct.getTotalPrice();
         }
-        //Long totalPrice = cartProducts.stream().mapToLong(CartProduct::getTotalPrice).sum();//.reduce( (x, y) -> x+y );
-        Long deliveryFee = new PriceCalcultor().calculateDeliveryFee(totalPrice);
+         Long deliveryFee = new PriceCalcultor().calculateDeliveryFee(totalPrice);
         Long deliveryTotalPrice = totalPrice + deliveryFee;
         calculation.put("totalPrice",totalPrice);
         calculation.put("deliveryFee", deliveryFee);
@@ -91,16 +85,6 @@ public class Cart extends AbstractEntity {
         return this.user.equals(user);
     }
 
-    //    @Override
-//    public String toString() {
-//        return "Cart{" +
-//                "cartProducts=" +
-//                cartProducts.stream().map(x-> x.getId()).collect(Collectors.toList()) +
-//                ", user=" + user +
-//                ", cartProductCnt=" + cartProductCnt +
-//                //", calculation "+ getPrice(new PriceCalcultor(), new MoneyFormatter()) +
-//                '}';
-//    }
     private static class EmptyCart extends Cart {
         @Override
         public boolean isEmptyCart() {
@@ -118,4 +102,5 @@ public class Cart extends AbstractEntity {
 
         }
     }
+
 }

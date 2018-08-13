@@ -29,22 +29,12 @@ public class CartProductDTO {
     private Long productId;
     private Long totalPrice;
 
-    public CartProduct toEntity() {
-        return new CartProduct(this);
-    }
 
-    /*
-        public void fillCart(@NotNull Cart cart){
-            this.cart = cart;
-        }
-        public void fillProduct(@NotNull Product product, PriceCalcultor priceCalcultor){
-            this.product = product;
-            this.totalPrice = product.calculatePrice(priceCalcultor, this.count);
-        }
-        */
-    public void fill(@NotNull Cart cart, @NotNull Product product, PriceCalcultor priceCalcultor) {
+    public CartProduct create(@NotNull Cart cart, @NotNull Product product, PriceCalcultor priceCalcultor) {
         this.cart = cart;
         this.product = product;
         this.totalPrice = product.calculatePrice(priceCalcultor, this.count);
+        return new CartProduct(this);
+
     }
 }

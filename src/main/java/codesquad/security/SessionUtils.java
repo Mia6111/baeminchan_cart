@@ -19,8 +19,6 @@ public class SessionUtils {
         return Optional.ofNullable((User) session.getAttribute(USER_SESSION_KEY)).orElse(User.GUEST_USER);
     }
 
-    //todo get,setCartInSession
-
     public static void setCartInSession(HttpSession session, Cart cart) {
         session.setAttribute(CART_SESSION_KEY, cart);
     }
@@ -28,6 +26,10 @@ public class SessionUtils {
     public static Cart getCartFromSession(HttpSession session){
         return Optional.ofNullable((Cart) session.getAttribute(CART_SESSION_KEY)).orElse(Cart.EMPTY_CART);
     }
+
+//    public static Cart getOptionalCartFromSession(HttpSession session){
+//        return (Cart) session.getAttribute(CART_SESSION_KEY);
+//    }
     public static boolean isLoginUser(HttpSession session) {
         return session.getAttribute(USER_SESSION_KEY) != null;
     }

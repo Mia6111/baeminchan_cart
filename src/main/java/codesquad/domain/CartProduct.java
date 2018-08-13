@@ -14,12 +14,7 @@ import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
-@Data
-//todo @DATA 공부
-@NoArgsConstructor
-
-//todo builder 삭제
-@Builder @AllArgsConstructor
+@Getter @NoArgsConstructor
 @Entity
 @Slf4j
 public class CartProduct extends AbstractEntity{
@@ -40,28 +35,19 @@ public class CartProduct extends AbstractEntity{
     @DecimalMin(value = "0")
     Long totalPrice = 0L;
 
-
-    public CartProduct(PriceCalcultor calcultor){
-
-    }
+    @Builder
     public CartProduct(CartProductDTO dto){
         this.product = dto.getProduct();
         this.count = dto.getCount();
         this.totalPrice = dto.getTotalPrice();
-        this.setCart(dto.getCart());
+        this.registerCart(dto.getCart());
 
     }
-    public void setCart(@NotNull Cart cart){
+    public void registerCart(@NotNull Cart cart){
         this.cart = cart;
         this.cart.addCartProduct(this);
     }
-//hint priceCalculator
-    public CartProduct(@NotNull Cart cart, @NotNull Product product, int count, PriceCalcultor priceCalcultor) {
-        this.cart = cart;
-        this.product = product;
-        this.count = count;
-        this.totalPrice = product.calculatePrice(priceCalcultor, this.count);
-    }
+
     @PostLoad
     @PrePersist @PreUpdate
     public void initTotalPrice() {
@@ -73,25 +59,6 @@ public class CartProduct extends AbstractEntity{
         return totalPrice;
     }
 
-    /*
-        //hint Product, Cart 가 같은 경우, 같은 CartProduct - 식별키
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            //todo 질문하기 - contains & equals를 쓰지 않는다?
-            //if (!super.equals(o)) return false;
-            CartProduct that = (CartProduct) o;
-            return
-                    Objects.equals(cart, that.cart) &&
-                    Objects.equals(product, that.product) ;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(super.hashCode(), cart, product);
-        }
-    */
     public void changeCountBy(CartProduct cartProduct) {
         this.count += cartProduct.count;
     }
