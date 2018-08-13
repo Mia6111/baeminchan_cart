@@ -1,10 +1,10 @@
 package codesquad.web;
 
 import codesquad.domain.User;
-import codesquad.exception.ValidationError;
-import codesquad.exception.ValidationErrorResponse;
 import codesquad.dto.LoginDTO;
 import codesquad.dto.UserDTO;
+import codesquad.exception.ValidationError;
+import codesquad.exception.ValidationErrorResponse;
 import codesquad.support.test.AcceptanceTest;
 import org.junit.Test;
 import org.slf4j.Logger;
