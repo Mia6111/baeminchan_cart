@@ -17,7 +17,11 @@ import java.util.Objects;
 @Getter @NoArgsConstructor
 @Entity
 @Slf4j
-public class CartProduct extends AbstractEntity{
+public class CartProduct{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+
     @ManyToOne(optional = false)
     @NotNull
     @ToString.Exclude
@@ -36,30 +40,43 @@ public class CartProduct extends AbstractEntity{
     Long totalPrice = 0L;
 
     @Builder
-    public CartProduct(CartProductDTO dto){
-        this.product = dto.getProduct();
-        this.count = dto.getCount();
-        this.totalPrice = dto.getTotalPrice();
-        this.registerCart(dto.getCart());
-
-    }
-    public void registerCart(@NotNull Cart cart){
+    public CartProduct(Cart cart, Product product, int count){
+        this.product = product;
         this.cart = cart;
-        this.cart.addCartProduct(this);
+        this.count = count;
+        this.totalPrice = product.calculatePrice(count);
     }
 
-    @PostLoad
-    @PrePersist @PreUpdate
-    public void initTotalPrice() {
-        this.totalPrice =  product.calculatePrice(PriceCalcultor.getInstance(), this.count);
-        log.debug(" initTotalPrice called CartProduct {} ",totalPrice);
+    @PostLoad @PostPersist @PostUpdate
+    public void resetTotalPrice() {
+        this.totalPrice =  product.calculatePrice(this.count);
     }
 
     public Long getTotalPrice() {
         return totalPrice;
     }
 
-    public void changeCountBy(CartProduct cartProduct) {
-        this.count += cartProduct.count;
+    public void changeCountBy(int newAmount) {
+        this.count = newAmount;
+    }
+
+    public void addProduct(int addedAmt) {
+        this.count += addedAmt;
+        this.resetTotalPrice();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CartProduct that = (CartProduct) o;
+        return Objects.equals(cart, that.cart) &&
+                Objects.equals(product, that.product);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(cart, product);
     }
 }

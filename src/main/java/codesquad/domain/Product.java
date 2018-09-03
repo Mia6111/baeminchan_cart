@@ -14,12 +14,8 @@ import javax.validation.constraints.Size;
 import java.text.NumberFormat;
 
 @Entity
-@Data
 @Slf4j
-//todo Builder 삭제
-@Builder @AllArgsConstructor
-//todo 왜 NoArgsConstructor 따로..?
-@NoArgsConstructor
+@NoArgsConstructor @Getter
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,17 +45,20 @@ public class Product {
     @Column(nullable = false)
     private boolean deliverable = false;
 
-    //todo priceCalculator 구현
-    public Long calculatePrice(PriceCalcultor priceCalcultor, int count) {
-        return priceCalcultor.calculatePrice(price, discountRate, count);
+    @Builder
+    public Product(long id, @Size(min = 1, max = 255) String title, @Size(min = 1, max = 255) String description, @Size(min = 1, max = 255) String imgUrl, @DecimalMin(value = "0") Long price, Category category, Long discountRate, boolean deliverable) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.imgUrl = imgUrl;
+        this.price = price;
+        this.category = category;
+        this.discountRate = discountRate;
+        this.deliverable = deliverable;
     }
-//    //todo 해결방법 찾기
-//    @JsonGetter("formattedPrice")
-//    @Autowired
-//    public String getFormattedPrice(MoneyFormatter moneyFormatter){
-//        log.debug("getFormattedPrice called 1");
-//        return moneyFormatter.longToMoney(this.price);
-//    }
+    public Long calculatePrice(int count) {
+        return PriceCalcultor.calculatePrice(price, discountRate, count);
+    }
     @JsonGetter("formattedPrice")
     public String getFormattedPrice(){
         log.debug("getFormattedPrice called 2 ");

@@ -3,16 +3,14 @@ package codesquad.domain;
 import codesquad.dto.UserDTO;
 import codesquad.exception.UserVerificationException;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.persistence.*;
+import java.util.Objects;
 
 @Entity
-@Data
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@NoArgsConstructor @Getter
 public class User {
     public static final String FIELD_NAME_EMAIL = "email";
     public static final String FIELD_NAME_PASSWORD = "password";
@@ -37,32 +35,36 @@ public class User {
     @Enumerated(EnumType.ORDINAL)
     @Column(nullable = false)
     private UserPermissions permissions;
-/*
-    //hint 삭제?
-    @OneToOne (mappedBy = "user")
-    private Cart cart;
-*/
-    public User() {
-        permissions = UserPermissions.NORMAL;
-    }
 
-    public User(long id, String email, String password, String name, String phoneNumber) {
-        this(email, password, name, phoneNumber);
-        this.id = id;
-    }
 
+   @Builder
     public User(String email, String password, String name, String phoneNumber) {
         this();
         this.email = email;
         this.password = password;
         this.name = name;
         this.phoneNumber = phoneNumber;
+        this.permissions = UserPermissions.NORMAL;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return Objects.equals(email, user.email) &&
+                Objects.equals(password, user.password);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(email, password);
     }
 
     public void matchPassword(String rawPassword, PasswordEncoder passwordEncoder) {
         if (!passwordEncoder.matches(rawPassword, password))
             throw new UserVerificationException(FIELD_NAME_PASSWORD, "비밀번호를 확인하기 바랍니다.");
-        ;
     }
 
     public static User valueOf(UserDTO userDTO, PasswordEncoder passwordEncoder) {
@@ -93,6 +95,7 @@ public class User {
         public boolean isGuestUser() {
             return true;
         }
+
     }
 
 

@@ -1,30 +1,30 @@
 package codesquad.domain;
 
-import codesquad.support.AbstractEntity;
+import codesquad.dto.CartProductDTO;
 import codesquad.support.PriceCalcultor;
-import com.fasterxml.jackson.annotation.*;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.annotations.Cascade;
-import org.hibernate.annotations.CascadeType;
 
-import javax.annotation.PostConstruct;
 import javax.persistence.*;
 import java.util.*;
 
 
 @Entity
 @Slf4j
-@Data
-public class Cart extends AbstractEntity {
-    public static final Cart EMPTY_CART = new EmptyCart();
+@Getter @NoArgsConstructor
+public class Cart {
+    public static final Cart EMPTY_CART = new EmptyCart(null, 0);
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
 
     @JsonIgnore
     @OneToMany(mappedBy = "cart")
-    @Cascade(CascadeType.ALL)
-    @OrderBy("created_at")
     private List<CartProduct> cartProducts = new ArrayList<>();
-    //private Map<Long, CartProduct> cartProductsMap = new LinkedHashMap<>();
 
     @JsonIgnore
     @OneToOne
@@ -35,20 +35,25 @@ public class Cart extends AbstractEntity {
     @Transient
     private int cartProductCnt;
 
-    @JsonIgnore
-    public boolean isEmptyCart() {
-        return false;
+
+    public Cart(User user, int cartProductCnt) {
+        this.user = user;
+        this.cartProductCnt = cartProductCnt;
     }
 
-
     @PostLoad @PostPersist @PostUpdate
-    public void setCartProductCnt() {
+    public void calculateCartProductCnt() {
         this.cartProductCnt = cartProducts.size();
         log.debug("getCartProductCnt {}", cartProductCnt);
     }
-
-    //todo 어떻게 하나
-    //@JsonAnyGetter
+    public void increaseCartProductCnt() {
+        this.cartProductCnt++;
+        log.debug("increaseCartProductCnt {}", this.cartProductCnt);
+    }
+    public void decreateCartProductCnt() {
+        this.cartProductCnt--;
+        log.debug("decreateCartProductCnt {}", this.cartProductCnt);
+    }
     @JsonGetter("calculation")
     public Map getCalculation() {
         Map<String, Object> calculation = new HashMap();
@@ -56,36 +61,57 @@ public class Cart extends AbstractEntity {
         for (CartProduct cartProduct :cartProducts) {
             totalPrice += cartProduct.getTotalPrice();
         }
-         Long deliveryFee = new PriceCalcultor().calculateDeliveryFee(totalPrice);
+        Long deliveryFee = PriceCalcultor.calculateDeliveryFee(totalPrice);
         Long deliveryTotalPrice = totalPrice + deliveryFee;
+
         calculation.put("totalPrice",totalPrice);
         calculation.put("deliveryFee", deliveryFee);
         calculation.put("deliveryFeeThreashold", PriceCalcultor.DELIVERY_FEE_FREE_THRESHOLD);
         calculation.put("deliveryTotalPrice",deliveryTotalPrice);
         return calculation;
     }
+    @JsonIgnore
+    public boolean isEmptyCart() {
+        return false;
+    }
 
-    public void addCartProduct(CartProduct cartProduct){
-        log.debug("cartProduct {} {}", cartProduct, cartProduct.hashCode());
-        //todo 리팩토링 - 코드 정리 또는 List > Map 으로 바꾸기
-        //hint 가정 : id가 이미 있는, Repository에 저장된 Product여야한다...
-        Optional<CartProduct> duplicate = cartProducts.stream()
-                .filter(x -> x.getProduct().getId().equals(cartProduct.getProduct().getId())).findFirst();
-        if (duplicate.isPresent()){
-            log.debug(" isPresent {}", duplicate.get());
-            duplicate.get().changeCountBy(cartProduct);
-            log.debug("isPresent cartProduct {} {}", cartProduct, cartProduct.hashCode());
-            return;
-        }
-        this.cartProducts.add(cartProduct);
-        cartProductCnt++;
+    public void assignOwner(User loginUser){
+        this.user = loginUser;
     }
 
     public boolean isOwner(User user) {
         return this.user.equals(user);
     }
 
+    public void addProduct(CartProduct cartProduct){
+        if (cartProducts.contains(cartProduct)) {
+            cartProducts.stream().filter(x -> x.equals(cartProduct))
+                    .findFirst()
+                    .ifPresent(x -> x.addProduct(cartProduct.count));
+            return;
+        }
+        cartProducts.add(cartProduct);
+        this.increaseCartProductCnt();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Cart cart = (Cart) o;
+        return Objects.equals(user, cart.user);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(user);
+    }
+
     private static class EmptyCart extends Cart {
+        public EmptyCart(User user, int cartProductCnt) {
+            super(user, cartProductCnt);
+        }
+
         @Override
         public boolean isEmptyCart() {
             return true;
