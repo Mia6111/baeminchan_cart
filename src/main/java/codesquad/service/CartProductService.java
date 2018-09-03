@@ -2,7 +2,6 @@ package codesquad.service;
 
 import codesquad.domain.*;
 import codesquad.dto.CartProductDTO;
-import codesquad.dto.SetCartProductDTO;
 import codesquad.exception.NotAuthorizedException;
 import codesquad.exception.ResourceNotFoundException;
 import codesquad.support.PriceCalcultor;
@@ -17,6 +16,8 @@ import java.util.Optional;
 @Slf4j
 public class CartProductService {
     @Autowired
+    private ProductService productService;
+    @Autowired
     private CartRepository cartRepository;
     @Autowired
     private CartProductRepository cartProductRepository;
@@ -27,49 +28,50 @@ public class CartProductService {
         this.priceCalcultor = priceCalcultor;
     }
 
-    public CartProduct initCartProduct(CartProductDTO cartProductDTO, Cart cart, Product product) {
-        return cartProductDTO.create(cart, product, priceCalcultor);
-    }
     @Transactional
-    public Cart addToCart(CartProductDTO dto, Cart cart, Product product) {
-        CartProduct cartProduct = initCartProduct(dto, cart, product);
-        cartProduct = cartProductRepository.saveAndFlush(cartProduct);
-        return cartProduct.getCart();
+    public Cart addProductToCart(CartProductDTO dto, Cart sessionedCart){
+        Product product = productService.findById(dto.getProductId());
+
+       CartProduct originalCartProduct = cartProductRepository.findByCartAndProduct(sessionedCart, product)
+               .orElseGet(() -> convertToCartProduct(dto, sessionedCart));
+
+       sessionedCart.addProduct(originalCartProduct);
+       originalCartProduct = cartProductRepository.save(originalCartProduct);
+        log.debug("addedProductToCart ### CartProduct {} ### Cart {}", originalCartProduct, originalCartProduct.getCart());
+        log.debug("addedProductToCart SessionedCart {}",sessionedCart);
+        return sessionedCart;
+    }
+
+
+    private CartProduct convertToCartProduct(CartProductDTO dto, Cart cart) {
+        return CartProduct.builder()
+                .cart(cart)
+                .product(productService.findById(dto.getProductId()))
+                .count(dto.getCount()).build();
     }
 
     public Cart initCart(User user, Cart cartFromSession){
         Cart managedCart = createCartIfEmpty(cartFromSession);
-        managedCart = saveUserIfLoggedIn(user, managedCart);
+        managedCart = assignUserIfLoggedIn(user, managedCart);
+        managedCart = cartRepository.save(managedCart);
         return managedCart;
     }
-
+    //todo > 다시 체크
     public Cart createCartIfEmpty(Cart cartFromSession) {
         if (cartFromSession.isEmptyCart()) {
-            cartFromSession = cartRepository.saveAndFlush(new Cart());
+            cartFromSession = new Cart(null, 0);
         }
         return cartFromSession;
     }
 
-    private Cart saveUserIfLoggedIn(User loginUser, Cart managedCart) {
+    private Cart assignUserIfLoggedIn(User loginUser, Cart managedCart) {
         if (!loginUser.isGuestUser()) {
-            managedCart.setUser(loginUser);
-            managedCart = cartRepository.saveAndFlush(managedCart);
+            managedCart.assignOwner(loginUser);
         }
         log.debug("user added {}", managedCart);
         return managedCart;
     }
 
-//    public Cart saveUserOfCart(Cart cartFromSession, User user){
-//        Optional<Cart> originalCart = getCartByUser(user);
-//        if(originalCart.isPresent())
-//            return originalCart.get();
-//
-//        Cart managedCart = createCartIfEmpty(cartFromSession);
-//        return saveUserIfLoggedIn(user, managedCart);
-//
-//        if(cartFromSession != null && originalCart.isPresent()){
-//        }
-//    }
     public Optional<Cart> getCartByUser(User user) {
         if (!user.isGuestUser())
             return findCartByUserId(user.getId());
@@ -81,20 +83,23 @@ public class CartProductService {
     }
 
     @Transactional
-    public Cart changeCartItem(SetCartProductDTO setCartProductDTO, Cart cart, User user) {
+    public Cart changeCartItem(CartProductDTO cartProductDTO, Cart cart, User user) {
         //todo refactor
         log.debug("cart ", cart);
         if (!user.isGuestUser() && !cart.isOwner(user)) {
             throw new NotAuthorizedException();
         }
-        log.debug("setCartProductDTO {}", setCartProductDTO);
         // update가 아닌 insert 문으로 실행된다. 왜일까?
-        CartProduct cartProduct = cart.getCartProducts().stream().filter(x -> x.getId() == setCartProductDTO.getCartId()).findFirst().orElseThrow(ResourceNotFoundException::new);
-//        cartProduct.setCount(setCartProductDTO.getCount());
-        Cart changedCart = cartRepository.save(cart);
-        log.debug("cartProduct Exists {}", cartProduct);
+        CartProduct cartProduct = getCartProduct(cart, cartProductDTO.getCartProductId());
+        cartProduct.changeCountBy(cartProductDTO.getCount());
+        log.debug("cartProduct Updated {}", cartProduct);
 
         log.debug("changedCart {}", cartProduct.getCart());
-        return changedCart; //cartProduct.getCart();
+        return cartProduct.getCart();
+    }
+    private CartProduct getCartProduct(Cart cart, long cartProductId){
+        return cartProductRepository.findByCartAndId(cart, cartProductId)
+                .orElseThrow(ResourceNotFoundException::new);
+
     }
 }

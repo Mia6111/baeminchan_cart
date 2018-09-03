@@ -1,10 +1,8 @@
 package codesquad.web;
 
 import codesquad.domain.Cart;
-import codesquad.domain.Product;
 import codesquad.domain.User;
 import codesquad.dto.CartProductDTO;
-import codesquad.dto.SetCartProductDTO;
 import codesquad.security.SessionUtils;
 import codesquad.service.CartProductService;
 import codesquad.service.ProductService;
@@ -20,7 +18,6 @@ import javax.servlet.http.HttpSession;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/cart")
 public class ApiCartController {
 
     @Autowired
@@ -29,25 +26,40 @@ public class ApiCartController {
     @Autowired
     private ProductService productService;
 
-    @PostMapping("")
+    @PostMapping("/api/carts")
     public ResponseEntity<ApiSuccessResponse> addToCart(@RequestBody CartProductDTO cartProductDTO, HttpSession session) {
         Cart managedCart = cartProductService.initCart(SessionUtils.getUserFromSession(session), SessionUtils.getCartFromSession(session));
-        Product product = productService.findById(cartProductDTO.getProductId());
-        Cart addedCart = cartProductService.addToCart(cartProductDTO, managedCart, product);
+
+        Cart addedCart = cartProductService.addProductToCart(cartProductDTO, managedCart);
+
+        //todo in posthandle/interceptor
         SessionUtils.setCartInSession(session, addedCart);
+
         log.debug("after addToCart cart in session {} {}", addedCart, managedCart.hashCode());
         return ResponseEntity.ok(new ApiSuccessResponse(HttpStatus.OK, addedCart, null));
     }
 
-    @PutMapping("")
-    public ResponseEntity<ApiSuccessResponse> changeAmount(@RequestBody SetCartProductDTO setCartProductDTO, HttpSession session) {
+    @PutMapping("/api/carts")
+    public ResponseEntity<ApiSuccessResponse> changeAmount(@RequestBody CartProductDTO cartProductDTO, HttpSession session) {
+        //todo in prehandle / interceptor -
         Cart cart = SessionUtils.getCartFromSession(session);
         User user = SessionUtils.getUserFromSession(session);
-        log.debug("cart in session {} {}", cart, cart.hashCode());
-        log.debug("user in session {}", user);
-        Cart addedCart = cartProductService.changeCartItem(setCartProductDTO, cart, user);
+
+        Cart addedCart = cartProductService.changeCartItem(cartProductDTO, cart, user);
+        //todo in posthandle/interceptor
         SessionUtils.setCartInSession(session, addedCart);
         return ResponseEntity.ok(new ApiSuccessResponse(HttpStatus.OK, addedCart, null));
     }
 
+    @DeleteMapping("/api/carts")
+    public ResponseEntity<ApiSuccessResponse> deleteCartItem(@RequestBody CartProductDTO cartProductDTO, HttpSession session) {
+        //todo in prehandle / interceptor -
+        Cart cart = SessionUtils.getCartFromSession(session);
+        User user = SessionUtils.getUserFromSession(session);
+
+        Cart addedCart = cartProductService.changeCartItem(cartProductDTO, cart, user);
+        //todo in posthandle/interceptor
+        SessionUtils.setCartInSession(session, addedCart);
+        return ResponseEntity.ok(new ApiSuccessResponse(HttpStatus.OK, addedCart, null));
+    }
 }

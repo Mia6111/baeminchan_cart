@@ -4,6 +4,7 @@ import codesquad.domain.Cart;
 import codesquad.domain.User;
 import codesquad.dto.LoginDTO;
 import codesquad.dto.UserDTO;
+import codesquad.rest.ApiSuccessResponse;
 import codesquad.security.SessionUtils;
 import codesquad.service.CartProductService;
 import codesquad.service.UserService;
@@ -15,7 +16,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.net.URI;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -37,8 +37,8 @@ public class ApiUserController {
     public ResponseEntity<ApiSuccessResponse> login(HttpSession session, @RequestBody LoginDTO loginDTO) {
         User loginUser = userService.login(loginDTO);
         SessionUtils.setUserInSession(session, loginUser);
+        //if session cart exists > set user, and save
         Cart managedCart = cartService.getCartByUser(loginUser)
-                //if session cart exists > set user, and save
                 .orElse(cartService.initCart(loginUser,SessionUtils.getCartFromSession(session)));
         SessionUtils.setCartInSession(session, managedCart);
 

@@ -13,28 +13,24 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 
-@NoArgsConstructor
-@Data
-
-//todo builder 삭제
-@Builder
-@AllArgsConstructor
+@NoArgsConstructor @Getter @Setter
 public class CartProductDTO {
-    private Product product;
-    private Cart cart;
+   // private Product product;
+   // private Cart cart;
     @NotNull
     @Min(1)
     private int count = 1;
     @NotNull
-    private Long productId;
-    private Long totalPrice;
+    private long productId;
 
+    private long cartProductId;
+//    private Long totalPrice;
 
-    public CartProduct create(@NotNull Cart cart, @NotNull Product product, PriceCalcultor priceCalcultor) {
-        this.cart = cart;
-        this.product = product;
-        this.totalPrice = product.calculatePrice(priceCalcultor, this.count);
-        return new CartProduct(this);
-
+    @Builder
+    public CartProductDTO(int count, long productId, long cartProductId) {
+        this.count = count;
+        this.productId = productId;
+        this.cartProductId = cartProductId;
     }
+
 }

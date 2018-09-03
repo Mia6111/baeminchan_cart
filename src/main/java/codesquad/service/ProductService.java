@@ -18,8 +18,6 @@ public class ProductService {
     public List<Product> findAll() {
         return productRepository.findAll();
     }
-
-    //todo NOTFOUNDExcpetion
     public Product findById(long id) {
         return productRepository.findById(id).orElseThrow(ResourceNotFoundException::new);
     }
