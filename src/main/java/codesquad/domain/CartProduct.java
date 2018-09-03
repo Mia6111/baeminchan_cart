@@ -17,6 +17,7 @@ import java.util.Objects;
 @Getter @NoArgsConstructor
 @Entity
 @Slf4j
+@ToString
 public class CartProduct{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

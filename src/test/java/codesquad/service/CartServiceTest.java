@@ -2,6 +2,7 @@ package codesquad.service;
 
 import codesquad.domain.*;
 import codesquad.dto.CartProductDTO;
+import codesquad.support.PriceCalcultor;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.*;
 import java.util.stream.Collector;
@@ -23,77 +27,67 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CartServiceTest {
     Logger log = LoggerFactory.getLogger(CartServiceTest.class);
 
-    @Mock
+    @Autowired
     private CartRepository cartRepository;
-    @InjectMocks
+    @Autowired
     private CartProductService cartService;
 
-    @Mock
+    @Autowired
+    private CartProductRepository cartProductRepository;
+
+    @Autowired
     private ProductRepository productRepository;
-    @InjectMocks
-    private ProductService productService;
 
     CartProductDTO dto_product1, dto_product2;
     Product product1, product2;
+    User user;
+    Cart cartOfloginUser;
     @Before
     public void setUp() throws Exception {
         product1 = Product.builder().id(1L).title("TEST Product1").price(1000L).discountRate(0L).build();
         product2 = Product.builder().id(2L).title("TEST Product2").price(2000L).discountRate(10L).build();
-        // NOT WORKING
-        // when(productService.findById(product1.getId())).thenReturn(product1 );
-        // when(productService.findById(product2.getId())).thenReturn(product2 );
-
-        //when(cartService.findProductByDTO(dto_product1)).thenReturn(product1);
-        //when(cartService.findProductByDTO(dto_product2)).thenReturn(product1);
-
         dto_product1 = CartProductDTO.builder().count(3).productId(product1.getId()).build();
         dto_product2 = CartProductDTO.builder().count(6).productId(product2.getId()).build();
 
+        productRepository.save(product1);
+        productRepository.save(product2);
+
+        user = User.builder().id(1L).email("javajigi@tech.com").phoneNumber("12345678").name( "javajigi").phoneNumber( "010-1234-5678").build();
+        cartOfloginUser = new Cart(user, 0);
+
+        cartOfloginUser = cartRepository.save(cartOfloginUser);
+
+        CartProduct cartProduct = CartProduct.builder().cart(cartOfloginUser).product(product1).count(PriceCalcultor.DISCOUNT_AMT_THRESHOLD + 40).build();
+
+        cartProductRepository.save(cartProduct);
+
     }
+
+    /*
+    TEST
+    - 비회원 장바구니 있을때, 로그인 시 유지
+    - 비회원 -> 회원으로 바꿨을 때, 회원의 기존 장바구니 가져오기
+
+     */
 
     @Test
-    public void addCartProduct_비회원() {
-        when(productRepository.findById(product1.getId())).thenReturn(Optional.of(product1));
-        when(productRepository.findById(product2.getId())).thenReturn(Optional.of(product2));
-//        Cart mockCart = mock(Cart.class);
-//        when(cartRepository.save(Cart.EMPTY_CART)).thenReturn(mockCart);
+    public void test_로그인시(){
+        Cart cart = cartService.getCartofLoginUser(user, Cart.EMPTY_CART);
 
-        SoftAssertions softly = new SoftAssertions();
-        Cart cart = cartService.initCartProduct(dto_product1, Cart.EMPTY_CART, User.GUEST_USER);
-        log.debug("cart {}", cart);
-        //softly.assertThat(cart.isEmptyCart()).isFalse().as("NOT EMPTY CART");
-        softly.assertThat(cart.getCartProductCnt()).isEqualTo(1).as("PRODUCT CNT 1");
+        assertThat(cart.isEmptyCart()).isFalse();
+        assertThat(cart.getId()).isEqualTo(cartOfloginUser.getId());
+    }
+    @Test
+    public void addCartProduct_비회원_장바구니있고_로그인시_유지_기존장바구니없는경우() {
 
-        List<CartProduct> cartProductStream = extractCartProduct(cart.getCartProducts(), dto_product1.getProductId());
-        softly.assertThat(cartProductStream.size()).isEqualTo(1).as("CartProduct 중복 없음");
-        softly.assertThat(cartProductStream.get(0).getCount()).isEqualTo(dto_product1.getCount()).as("CartProduct 수량 체크");
-
-        dto_product1.setCount(5);
-
-        cart = cartService.initCartProduct(dto_product1, cart, User.GUEST_USER);
-        //softly.assertThat(cart.isEmptyCart()).isFalse().as("NOT EMPTY CART");
-        softly.assertThat(cart.getCartProductCnt()).isEqualTo(1).as("PRODUCT CNT 1 - 증가 하지 않음");
-        cartProductStream = extractCartProduct(cart.getCartProducts(), dto_product1.getProductId());
-
-        softly.assertThat(cartProductStream.size()).isEqualTo(1).as("CartProduct 중복 없음");
-        softly.assertThat(cartProductStream.get(0).getCount()).isEqualTo(dto_product1.getCount()).as("CartProduct 수량 변화 체크");
-
-        cart = cartService.initCartProduct(dto_product2, cart, User.GUEST_USER);
-        //softly.assertThat(cart.isEmptyCart()).isFalse().as("NOT EMPTY CART");
-        softly.assertThat(cart.getCartProductCnt()).isEqualTo(2).as("PRODUCT CNT 2 - 증가");
-        softly.assertThat(cart.getCartProducts().stream().map(x -> x.getProduct()).collect(Collectors.toList())).containsExactly(product1, product2).as("PRODUCT 순서 보장");
-        cartProductStream = extractCartProduct(cart.getCartProducts(), dto_product2.getProductId());
-        softly.assertThat(cartProductStream.get(0).getCount()).isEqualTo(dto_product2.getCount()).as("CartProduct 2 수량 체크");
-
-
-        softly.assertAll();
     }
 
-    public void addCartProduct_비회원_로그인() {
+    public void addCartProduct_회원_로그인시_기존장바구니_있는경우() {
 
     }
     public List<CartProduct> extractCartProduct(Collection<CartProduct> cartProducts, Long productId){

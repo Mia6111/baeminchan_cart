@@ -38,10 +38,10 @@ public class ApiUserController {
         User loginUser = userService.login(loginDTO);
         SessionUtils.setUserInSession(session, loginUser);
         //if session cart exists > set user, and save
-        Cart managedCart = cartService.getCartByUser(loginUser)
-                .orElse(cartService.initCart(loginUser,SessionUtils.getCartFromSession(session)));
+
+        Cart managedCart = cartService.getCartofLoginUser(loginUser, SessionUtils.getCartFromSession(session));
         SessionUtils.setCartInSession(session, managedCart);
 
-        return ResponseEntity.created(URI.create("/")).body(ApiSuccessResponse.builder("success"));
+        return ResponseEntity.created(URI.create("/")).body(new ApiSuccessResponse("success"));
     }
 }

@@ -18,10 +18,10 @@ class CartTooltip{
     }
 
     ajaxSetAmount(productId, amount) {
-        return fetchJsonPost({url: '/api/cart', body: {count: amount, productId}});
+        return fetchJsonPost({url: '/api/carts', body: {count: amount, productId}});
     }
-    ajaxChangeAmount(cartId, productId, amount) {
-        return fetchJsonRequest({url: '/api/cart', method: 'put',body: {count: amount, cartId, productId}});
+    ajaxChangeAmount(cartProductId, productId, amount) {
+        return fetchJsonRequest({url: '/api/carts', method: 'put',body: {count: amount, cartProductId, productId}});
     }
     updateAmount(amount, minAmount = 1) {
         if (amount < minAmount) return;

@@ -4,6 +4,7 @@ import codesquad.domain.*;
 import codesquad.dto.CartProductDTO;
 import codesquad.exception.NotAuthorizedException;
 import codesquad.exception.ResourceNotFoundException;
+import codesquad.security.SessionUtils;
 import codesquad.support.PriceCalcultor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,16 +30,16 @@ public class CartProductService {
     }
 
     @Transactional
-    public Cart addProductToCart(CartProductDTO dto, Cart sessionedCart){
+    public Cart addProductToCart(CartProductDTO dto, Cart sessionedCart) {
         Product product = productService.findById(dto.getProductId());
 
-       CartProduct originalCartProduct = cartProductRepository.findByCartAndProduct(sessionedCart, product)
-               .orElseGet(() -> convertToCartProduct(dto, sessionedCart));
+        CartProduct originalCartProduct = cartProductRepository.findByCartAndProduct(sessionedCart, product)
+                .orElseGet(() -> convertToCartProduct(dto, sessionedCart));
 
-       sessionedCart.addProduct(originalCartProduct);
-       originalCartProduct = cartProductRepository.save(originalCartProduct);
+        sessionedCart.addProduct(originalCartProduct);
+        originalCartProduct = cartProductRepository.save(originalCartProduct);
         log.debug("addedProductToCart ### CartProduct {} ### Cart {}", originalCartProduct, originalCartProduct.getCart());
-        log.debug("addedProductToCart SessionedCart {}",sessionedCart);
+        log.debug("addedProductToCart SessionedCart {}", sessionedCart);
         return sessionedCart;
     }
 
@@ -54,6 +55,8 @@ public class CartProductService {
         Cart managedCart = createCartIfEmpty(cartFromSession);
         managedCart = assignUserIfLoggedIn(user, managedCart);
         managedCart = cartRepository.save(managedCart);
+        log.debug("createCartIfEmpty initCart {} ", managedCart);
+
         return managedCart;
     }
     //todo > 다시 체크
@@ -64,6 +67,7 @@ public class CartProductService {
         return cartFromSession;
     }
 
+
     private Cart assignUserIfLoggedIn(User loginUser, Cart managedCart) {
         if (!loginUser.isGuestUser()) {
             managedCart.assignOwner(loginUser);
@@ -71,15 +75,8 @@ public class CartProductService {
         log.debug("user added {}", managedCart);
         return managedCart;
     }
-
-    public Optional<Cart> getCartByUser(User user) {
-        if (!user.isGuestUser())
-            return findCartByUserId(user.getId());
-        return Optional.empty();
-    }
-
-    private Optional<Cart> findCartByUserId(long id) {
-        return cartRepository.findByUserId(id);
+    private Optional<Cart> findCartByUser(User user) {
+        return cartRepository.findByUser(user);
     }
 
     @Transactional
@@ -89,7 +86,6 @@ public class CartProductService {
         if (!user.isGuestUser() && !cart.isOwner(user)) {
             throw new NotAuthorizedException();
         }
-        // update가 아닌 insert 문으로 실행된다. 왜일까?
         CartProduct cartProduct = getCartProduct(cart, cartProductDTO.getCartProductId());
         cartProduct.changeCountBy(cartProductDTO.getCount());
         log.debug("cartProduct Updated {}", cartProduct);
@@ -97,9 +93,25 @@ public class CartProductService {
         log.debug("changedCart {}", cartProduct.getCart());
         return cartProduct.getCart();
     }
-    private CartProduct getCartProduct(Cart cart, long cartProductId){
+
+    private CartProduct getCartProduct(Cart cart, long cartProductId) {
         return cartProductRepository.findByCartAndId(cart, cartProductId)
                 .orElseThrow(ResourceNotFoundException::new);
 
+    }
+
+    public Cart assignUserToCart(User loginUser, Cart cartFromSession) {
+        Cart managedCart = new Cart(loginUser, 0);
+        if(!cartFromSession.isEmptyCart()){
+            cartFromSession.assignOwner(loginUser);
+            managedCart = new Cart(cartFromSession);
+        }
+        cartRepository.save(managedCart);
+        return managedCart;
+    }
+
+    public Cart getCartofLoginUser(User loginUser, Cart cartFromSession) {
+        return findCartByUser(loginUser)
+                .orElseGet(() -> assignUserToCart(loginUser, cartFromSession ));
     }
 }

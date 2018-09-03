@@ -36,7 +36,7 @@ public class UserServiceTest {
     @Before
     public void setUp() throws Exception {
         loginDTO = new LoginDTO();
-        user = new User(1L, "javajigi@tech.com", "12345678", "javajigi", "010-1234-5678");
+        user = User.builder().id(1L).email("javajigi@tech.com").phoneNumber("12345678").name( "javajigi").phoneNumber( "010-1234-5678").build();
     }
 
     @Test(expected = UserVerificationException.class)

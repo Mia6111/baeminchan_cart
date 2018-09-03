@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.persistence.*;
@@ -15,6 +16,7 @@ import java.util.*;
 @Entity
 @Slf4j
 @Getter @NoArgsConstructor
+@ToString
 public class Cart {
     public static final Cart EMPTY_CART = new EmptyCart(null, 0);
 
@@ -35,7 +37,11 @@ public class Cart {
     @Transient
     private int cartProductCnt;
 
-
+    public Cart(Cart copy){
+        this(copy.user, copy.cartProductCnt);
+        this.cartProducts = copy.cartProducts;
+        this.id = copy.id;
+    }
     public Cart(User user, int cartProductCnt) {
         this.user = user;
         this.cartProductCnt = cartProductCnt;
@@ -92,6 +98,14 @@ public class Cart {
         }
         cartProducts.add(cartProduct);
         this.increaseCartProductCnt();
+    }
+    public void updateProduct(CartProduct cartProduct){
+        if (cartProducts.contains(cartProduct)) {
+            cartProducts.stream().filter(x -> x.equals(cartProduct))
+                    .findFirst()
+                    .ifPresent(x -> x.changeCountBy(cartProduct.count));
+            return;
+        }
     }
 
     @Override

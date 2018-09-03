@@ -11,6 +11,7 @@ import java.util.Objects;
 
 @Entity
 @NoArgsConstructor @Getter
+@ToString
 public class User {
     public static final String FIELD_NAME_EMAIL = "email";
     public static final String FIELD_NAME_PASSWORD = "password";

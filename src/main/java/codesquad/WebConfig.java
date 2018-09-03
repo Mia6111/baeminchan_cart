@@ -1,6 +1,8 @@
 package codesquad;
 
 import codesquad.security.BasicAuthInterceptor;
+import codesquad.security.EventSessionAttributeListener;
+import codesquad.security.EventSessionListener;
 import codesquad.security.FixedPasswordEncoder;
 import codesquad.support.MoneyFormatter;
 import codesquad.support.PriceCalcultor;
@@ -15,16 +17,26 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionListener;
+
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new FixedPasswordEncoder();
     }
+
     @Bean
-    public MoneyFormatter moneyFormatter(){ return new MoneyFormatter();}
+    public MoneyFormatter moneyFormatter() {
+        return new MoneyFormatter();
+    }
+
     @Bean
-    public PriceCalcultor priceCalcultor(){ return new PriceCalcultor(); }
+    public PriceCalcultor priceCalcultor() {
+        return new PriceCalcultor();
+    }
+
     @Bean
     public MessageSource messageSource() {
         ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
@@ -34,6 +46,14 @@ public class WebConfig implements WebMvcConfigurer {
         return messageSource;
     }
 
+    @Bean
+    public HttpSessionListener httpSessionListener() {
+        return new EventSessionListener();
+    }
+    @Bean
+    public HttpSessionAttributeListener httpSessionAttributeListener() {
+        return new EventSessionAttributeListener();
+    }
     @Bean
     public MessageSourceAccessor messageSourceAccessor() {
         return new MessageSourceAccessor(messageSource());
