@@ -37,9 +37,17 @@ public class User {
     private UserPermissions permissions;
 
 
-   @Builder
+
     public User(String email, String password, String name, String phoneNumber) {
-        this();
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.phoneNumber = phoneNumber;
+        this.permissions = UserPermissions.NORMAL;
+    }
+    @Builder
+    public User(long id, String email, String password, String name, String phoneNumber) {
+        this.id = id;
         this.email = email;
         this.password = password;
         this.name = name;

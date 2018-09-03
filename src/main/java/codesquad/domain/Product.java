@@ -12,6 +12,7 @@ import javax.persistence.*;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Size;
 import java.text.NumberFormat;
+import java.util.Objects;
 
 @Entity
 @Slf4j
@@ -35,7 +36,7 @@ public class Product {
 
     //todo categoryId
     @JsonIgnore @ToString.Exclude
-    @ManyToOne(optional = false)
+    @ManyToOne//(optional = false)
     private Category category;
 
     //todo discountRate -- int? long?
@@ -63,5 +64,20 @@ public class Product {
     public String getFormattedPrice(){
         log.debug("getFormattedPrice called 2 ");
         return String.valueOf(this.price);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return Objects.equals(id, product.id) &&
+                Objects.equals(title, product.title);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, title);
     }
 }

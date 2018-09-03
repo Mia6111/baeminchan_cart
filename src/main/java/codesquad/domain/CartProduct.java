@@ -40,7 +40,8 @@ public class CartProduct{
     Long totalPrice = 0L;
 
     @Builder
-    public CartProduct(Cart cart, Product product, int count){
+    public CartProduct(long id, Cart cart, Product product, int count){
+        this.id = id;
         this.product = product;
         this.cart = cart;
         this.count = count;
